@@ -8,7 +8,7 @@ const schema = {
   properties: {
     id: { type: "string" },
     name: { type: "string" },
-    amount: { type: "number" },
+    unit: { type: "string" },
   },
   required: ["id"],
   additionalProperties: false,

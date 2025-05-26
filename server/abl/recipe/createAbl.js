@@ -11,10 +11,23 @@ const schema = {
   properties: {
     name: { type: "string", maxLength: 150 },
     note: { type: "string", maxLength: 250 },
-    ingredientsId: { type: "string" },
-    ingredientsAmount : { type: "number" },
+    ingredientsList: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          ingredientsId: { type: "string" },
+          ingredientsAmount: { type: "number" },
+          ingredientsUnit: { type: "string", maxLength: 50 },
+          ingredientsName: { type: "string", maxLength: 150 }
+        },
+        required: ["ingredientsId", "ingredientsAmount"],
+        additionalProperties: false
+      },
+      minItems: 1
+    }
   },
-  required: ["name", "note", "ingredientsId", "ingredientsAmount"],
+  required: ["name", "note", "ingredientsList"],
   additionalProperties: false,
 };
 
@@ -33,16 +46,33 @@ async function CreateAbl(req, res) {
       return;
     }
 
-    // check if ingredientsId exists
-    const ingredients = ingredientsDao.get(recipe.ingredientsId);
-
-    if (!ingredients) {
+    // recipe duplicity name check (case-insensitive)
+    const existingRecipes = recipeDao.list();
+    const duplicate = existingRecipes.find(
+      r => r.name.toLowerCase() === recipe.name.toLowerCase()
+    );
+    if (duplicate) {
       res.status(400).json({
-        code: "ingredientsDoesNotExist",
-        message: `ingredients with id ${recipe.ingredientsId} does not exist`,
-        validationError: ajv.errors,
+        code: "recipeNameAlreadyExists",
+        message: `Recipe with name '${recipe.name}' already exists.`,
+        validationError: null,
       });
       return;
+    }
+
+    // check if ingredietns already exist
+    const ingredients = [];
+    for (const item of recipe.ingredientsList) {
+      const ingredient = ingredientsDao.get(item.ingredientsId);
+      if (!ingredient) {
+        res.status(400).json({
+          code: "ingredientsDoesNotExist",
+          message: `Ingredient with id ${item.ingredientsId} does not exist`,
+          validationError: null,
+        });
+        return;
+      }
+      ingredients.push(ingredient);
     }
 
     // store recipe to persistent storage

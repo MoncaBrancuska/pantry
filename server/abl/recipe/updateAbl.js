@@ -12,10 +12,23 @@ const schema = {
     id: { type: "string", minLength: 32, maxLength: 32 },
     name: { type: "string", maxLength: 150 },
     note: { type: "string", maxLength: 250 },
-    ingredientsId: { type: "string" },
-    ingredientsAmount : { type: "number" },
+    ingredientsList: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          ingredientsId: { type: "string" },
+          ingredientsAmount: { type: "number" },
+          ingredientsUnit: { type: "string", maxLength: 50 },
+          ingredientsName: { type: "string", maxLength: 150 }
+        },
+        required: ["ingredientsId", "ingredientsAmount"],
+        additionalProperties: false
+      },
+      minItems: 1
+    }
   },
-  required: ["id"],
+  required: ["name", "note", "ingredientsList"],
   additionalProperties: false,
 };
 
@@ -39,14 +52,17 @@ async function UpdateAbl(req, res) {
     const updatedrecipe = recipeDao.update(recipe);
 
     // check if ingredientsId exists
-    const ingredients = ingredientsDao.get(updatedrecipe.ingredientsId);
-    if (!ingredients) {
-      res.status(400).json({
-        code: "ingredientsDoesNotExist",
-        message: `ingredients with id ${updatedrecipe.ingredientsId} does not exist`,
-        validationError: ajv.errors,
-      });
-      return;
+    for (const ingredient of updatedrecipe.ingredientsList || []) {
+      const ingredientData = ingredientsDao.get(ingredient.ingredientsId);
+      if (!ingredientData) {
+        res.status(400).json({
+          code: "ingredientDoesNotExist",
+          message: `Ingredient with id ${ingredient.ingredientsId} does not exist`,
+          ingredientId: ingredient.ingredientsId,
+          validationError: ajv.errors,
+        });
+        return;
+      }
     }
 
     if (!updatedrecipe) {
@@ -58,7 +74,6 @@ async function UpdateAbl(req, res) {
     }
 
     // return properly filled dtoOut
-    updatedrecipe.ingredients = ingredients;
     res.json(updatedrecipe);
   } catch (e) {
     res.status(500).json({ message: e.message });

@@ -1,10 +1,12 @@
 const express = require("express");
+const cors = require("cors");  // pøidej tento øádek
 const app = express();
 const port = 8888;
 
 const recipeController = require("./controller/recipe");
 const ingredientsController = require("./controller/ingredients");
 
+app.use(cors());
 app.use(express.json()); // podpora pro application/json
 app.use(express.urlencoded({ extended: true })); // podpora pro application/x-www-form-urlencoded
 

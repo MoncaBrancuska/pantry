@@ -6,7 +6,7 @@ const recipeDao = require("../../dao/recipe-dao.js");
 const schema = {
   type: "object",
   properties: {
-    id: { type: "string" },
+    id: { type: "string" }
   },
   required: ["id"],
   additionalProperties: false,
@@ -21,30 +21,35 @@ async function DeleteAbl(req, res) {
     if (!valid) {
       res.status(400).json({
         code: "dtoInIsNotValid",
-        ingredients: "dtoIn is not valid",
+        message: "dtoIn is not valid",
         validationError: ajv.errors,
       });
       return;
     }
 
-    // check there is no recipe related to given ingredients
-    const recipeList = recipeDao.listByingredientsId(reqParams.id);
-    if (recipeList.length) {
+    // zkontroluj, jestli není ingredience použita v některém receptu
+    const allRecipes = recipeDao.list(); // nebo await recipeDao.list() podle implementace
+    const isUsed = allRecipes.some(recipe =>
+      recipe.ingredientsList?.some(ing => ing.ingredientsId === reqParams.id)
+    );
+
+    if (isUsed) {
       res.status(400).json({
-        code: "ingredientsWithrecipes",
-        message: "ingredients has related recipes and cannot be deleted",
-        validationError: ajv.errors,
+        code: "ingredientsWithRecipes",
+        message: "Ingredient is used in one or more recipes and cannot be deleted",
+        validationError: null,
       });
       return;
     }
 
-    // remove recipe from persistant storage
+    // odstraň ingredienci
     ingredientsDao.remove(reqParams.id);
 
-    // return properly filled dtoOut
+    // návrat prázdné odpovědi
     res.json({});
   } catch (e) {
-    res.status(500).json({ ingredients: e.ingredients });
+    console.error(e);
+    res.status(500).json({ message: e.message });
   }
 }
 

@@ -7,9 +7,9 @@ const schema = {
   type: "object",
   properties: {
     name: { type: "string", maxLength: 50 },
-    amount: { type: "number" },
+    unit: { type: "string" },
   },
-  required: ["name", "amount"],
+  required: ["name", "unit"],
 
   additionalProperties: false,
 };
@@ -25,6 +25,20 @@ async function CreateAbl(req, res) {
         code: "dtoInIsNotValid",
         ingredients: "dtoIn is not valid",
         validationError: ajv.errors,
+      });
+      return;
+    }
+
+    // ingredients duplicity name check (case-insensitive)
+    const existingIngredients = ingredientsDao.list(); 
+    const duplicate = existingIngredients.find(
+      r => r.name.toLowerCase() === ingredients.name.toLowerCase()
+    );
+    if (duplicate) {
+      res.status(400).json({
+        code: "ingredientsNameAlreadyExists",
+        message: `Ingredients with name '${ingredients.name}' already exists.`,
+        validationError: null,
       });
       return;
     }
